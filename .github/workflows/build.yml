@@ -2,6 +2,10 @@ name: Build IPA
 on:
   workflow_dispatch:
     inputs:
+      run_tests:
+        description: "Optional simulator tests (slower; not needed to package the IPA)"
+        type: boolean
+        default: false
       signed:
         description: "Apple-signed IPA with push (requires signing secrets)"
         type: boolean
@@ -58,6 +62,8 @@ jobs:
           xcodegen generate
           xcodebuild -version
       - name: Compile and test in simulator
+        if: github.event_name == 'workflow_dispatch' && inputs.run_tests == true
+        timeout-minutes: 10
         run: |
           DEVICE_ID=$(python3 scripts/simulator.py)
           xcodebuild test -project ios/ZKMemeRadar.xcodeproj -scheme ZKMemeRadar \
@@ -103,7 +109,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload test results
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.run_tests == true
         uses: actions/upload-artifact@v4
         with:
           name: iOS-Test-Results
